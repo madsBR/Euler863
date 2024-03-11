@@ -1,0 +1,77 @@
+# Generates rows for all rolls with integer probabilities, works for n = 1,2,3,4
+func_roll_list <- function(n, roll_list = c(2,3,5,6)){
+  if(n > 4){
+    stop("Function not built for n > 4")
+  }
+  one_roll_list <- c(2,3,5,6)
+  if(n == 1){
+    return(one_roll_list)
+  }
+  extra <- expand.grid(one_roll_list, roll_list)
+  extra <- extra$Var1 * extra$Var2
+  result <- extra
+  result <- unique(result)
+  if(n > 2){
+    result <- func_roll_list(n-1, roll_list = result)
+  }
+  return(result)
+}
+
+# Prints func_roll_list
+for(i in 1:4){
+  cat("--- rolls=", i, "---\n", func_roll_list(i), "\n", sep = " ")
+}
+
+nSim <- 10
+Rolls <- function(n){
+  # Create intervals to find size of base roll is needed to 
+  intervals <- c(6**0, 6**1, 6 **2, 6**3, 6**4, Inf)
+  r <- as.integer(cut(n, breaks = intervals, labels = FALSE))
+  rollable_nums <- func_roll_list(r)
+
+  # If precise dice can be rolled, return r
+  if(n%in%rollable_nums){
+    cat("n:",n, "in", r,"rolls \n")
+    return(r)
+  }
+  
+  # Initialize loop variables
+  sum <- r
+  rollable_mod <- rollable_nums %% n
+  roll_for <- rollable_nums[which.min((rollable_nums %% n)/rollable_nums)]
+  roll_for_mod_n <- roll_for%%n
+  for(i in 1:nSim){
+    sum <- sum + r*(roll_for_mod_n/roll_for)^i
+  }
+  cat("n:",n, "in", r + sum, "rolls, by", roll_for, "\n")
+  return(sum)
+}
+
+
+Rolls(4) # 1.25
+Rolls(8) # 2.083333
+Rolls(28) # 2.142476
+
+sum <- 0
+for(i in 2:30){
+  sum <- sum + Rolls(i)
+}
+
+cat("S(30) = ", sum, "should be: 56.054622")
+
+
+#############################################
+
+#So, $R(8) = 2.083333$ and $R(28) = 2.142476$
+#You are given that $S(30) \approx 56.054622$
+
+# Roll both dice, obtaining integers $1\le p\le 6$ and $1\le q\le 5$.
+#   Combine them using $r = 5(p-1) + q$ to obtain an integer $1\le r\le 30$.
+#   If $r\le 28$, return the value $r$ and stop.
+#   Otherwise ($r$ being 29 or 30), roll both dice again, obtaining integers $1\le s\le 6$ and $1\le t\le 5$.
+#   Compute $u = 30(r-29) + 5(s-1) + t$ to obtain an integer $1\le u\le 60$.
+#   If $u&gt;4$, return the value $((u-5)\bmod 28) + 1$ and stop.
+#   Otherwise (with $1\le u\le 4$), roll the six-sided dice twice, obtaining integers $1\le v\le 6$ and $1\le w\le 6$.
+#   Compute $x = 36(u-1) + 6(v-1) + w$ to obtain an integer $1\le x\le 144$.
+#   If $x&gt;4$, return the value $((x-5)\bmod 28) + 1$ and stop.
+#   Otherwise (with $1\le x\le 4$), assign $u:=x$ and go back to step 7.
